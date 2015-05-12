@@ -1,6 +1,7 @@
 package com.cjq.DownLoader.utils;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
@@ -14,23 +15,28 @@ public class ProgressLogUtil {
 
     private DBHelper helper;
 
-    public Map<Integer,Double> readProgress(String url){
+    public ProgressLogUtil(Context context) {
+        helper = new DBHelper(context);
+    }
+
+    public Map<Integer,Integer> readProgress(String url){
         SQLiteDatabase database = helper.getReadableDatabase();
         Cursor cursor = database.rawQuery("select thread_id,progress from download where url=?", new String[]{url});
         if(cursor.getCount()<=0){
             return null;
         }
         cursor.moveToFirst();
-        Map<Integer,Double> res = new HashMap<>();
-        res.put(cursor.getInt(0), cursor.getDouble(1));
+        Map<Integer,Integer> res = new HashMap<>();
+        res.put(cursor.getInt(0), cursor.getInt(1));
 
         while (cursor.moveToNext()){
-            res.put(cursor.getInt(0), cursor.getDouble(1));
+            res.put(cursor.getInt(0), cursor.getInt(1));
         }
+        cursor.close();
         return res;
     }
 
-    public void updateProgress(String url,int thread_id,double progress){
+    public void updateProgress(String url,int thread_id,int progress){
         SQLiteDatabase database = helper.getReadableDatabase();
         ContentValues values = new ContentValues();
         values.put("progress",progress);

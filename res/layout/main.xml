@@ -9,7 +9,7 @@
             android:layout_height="wrap_content"
             android:autoLink="all"
             android:id="@+id/text"
-            android:text="http://bs.baidu.com/baidu-suite-app-21/1003582u/471ba939e469f0adee3d39b0fc745351/%E7%99%BE%E5%BA%A6%E9%94%81%E5%B1%8F-%E7%99%BE%E5%BA%A6%E6%89%8B%E6%9C%BA%E5%8A%A9%E6%89%8B%E6%9E%81%E9%80%9F%E5%AE%89%E8%A3%85%E5%99%A8.exe"
+            android:text="http://bcscdn.baidu.com/netdisk/BaiduYun_7.8.3.apk"
             />
     <Button android:layout_width="fill_parent" android:layout_height="wrap_content"
             android:text="下载"
