@@ -13,10 +13,10 @@ import java.util.Map;
  */
 public class ProgressLogUtil {
 
-    private DBHelper helper;
+    private DownloadDBHelper helper;
 
     public ProgressLogUtil(Context context) {
-        helper = new DBHelper(context);
+        helper = new DownloadDBHelper(context);
     }
 
     public Map<Integer,Integer> readProgress(String url){

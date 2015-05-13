@@ -7,11 +7,11 @@ import android.database.sqlite.SQLiteOpenHelper;
 /**
  * Created by android on 2015/5/12.
  */
-public class DBHelper extends SQLiteOpenHelper {
+public class DownloadDBHelper extends SQLiteOpenHelper {
     public static final String NAME = "downloader.db";
     public static final int VERSION =1;
 
-    public DBHelper(Context context) {
+    public DownloadDBHelper(Context context) {
         super(context, NAME, null, VERSION);
     }
 
