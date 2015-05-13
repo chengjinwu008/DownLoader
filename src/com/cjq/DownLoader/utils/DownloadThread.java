@@ -57,8 +57,8 @@ public class DownloadThread extends Thread{
                 if(listener!=null)
                     listener.downloading(threadID, len);
             }
-            connection.disconnect();
             bin.close();
+            connection.disconnect();
             raf.close();
             if(listener!=null)
                 listener.downloadFinished(threadID, downloadedLength);

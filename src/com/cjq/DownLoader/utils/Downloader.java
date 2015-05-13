@@ -33,6 +33,16 @@ public class Downloader {
     private File file;//下载的文件对象
     private boolean prepared;//准备标识
     private DownloaderListener listener;//监听器
+    private boolean stoped = false;//停止下载标志
+    private boolean paused = false;//暂停下载标志
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public File getFile() {
+        return file;
+    }
 
     public Downloader(String urlString, String savePath, ProgressLogUtil progressLogUtil, int thread_count, DownloaderListener listener) {
         this.urlString = urlString;
@@ -43,13 +53,13 @@ public class Downloader {
     }
 
     public int getFileLength() {
-        if(prepared)
+        if (prepared)
             return fileLength;
         else
             throw new RuntimeException("not Prepared!");
     }
 
-    public interface  DownloaderListener{
+    public interface DownloaderListener {
         void onPrepareFinished(Downloader downloader);
 
         void onDownloading(int downloaded_size);
@@ -57,51 +67,55 @@ public class Downloader {
         void onDownloadFinished();
     }
 
-    public void downloadPrepare(){
+    public void downloadPrepare() {
+        //重新下载，则应该重置所有的标志
+        prepared = false;
+        stoped = false;
+        paused = false;
+
         //获取下载文件的长度
-        new Thread(){
+        new Thread() {
             @Override
             public void run() {
                 try {
-
                     URL url = new URL(urlString);
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                     ConnetionModifyUtil.setupConnection(connection);
                     connection.connect();
-                    if(connection.getResponseCode()==200)
-                    fileLength = connection.getContentLength();
-                    if(fileLength<0) throw new RuntimeException("unknown file size "+fileLength);
-                    Log.i("fileLength",""+fileLength);
+                    if (connection.getResponseCode() == 200)
+                        fileLength = connection.getContentLength();
+                    if (fileLength < 0) throw new RuntimeException("unknown file size " + fileLength);
+                    Log.i("fileLength", "" + fileLength);
                     String fileName = getFileName(connection);
 
                     //构建要下载的file对象
-                    file = new File(savePath,fileName);
-                    if(!file.getParentFile().exists()){
+                    file = new File(savePath, fileName);
+                    if (!file.getParentFile().exists()) {
                         file.getParentFile().mkdirs();
                     }
 
                     //获取下载记录
-                    logData =progressLogUtil.readProgress(urlString);
-                    if(logData!=null){
-                        if(logData.size()==thread_count){
+                    logData = progressLogUtil.readProgress(urlString);
+                    if (logData != null) {
+                        if (logData.size() == thread_count) {
                             //如果记录数量和线程数量一致，则表示可以断点续传
                             //统计下载了的数据大小
-                            for(Map.Entry<Integer,Integer> m:logData.entrySet()){
-                                downloaded_size+=m.getValue();
+                            for (Map.Entry<Integer, Integer> m : logData.entrySet()) {
+                                downloaded_size += m.getValue();
                             }
                         }
-                    }else {
-                        logData=new HashMap<Integer, Integer>();
+                    } else {
+                        logData = new HashMap<Integer, Integer>();
                     }
 
 //                    计算下载的片段大小
-                    block = fileLength%thread_count==0?fileLength/thread_count:fileLength/thread_count+1;
+                    block = fileLength % thread_count == 0 ? fileLength / thread_count : fileLength / thread_count + 1;
 
                     connection.disconnect();
                     //做好准备结束标识
                     prepared = true;
                     //执行准备完毕的监听器
-                    if(listener != null){
+                    if (listener != null) {
                         listener.onPrepareFinished(Downloader.this);
                     }
                 } catch (MalformedURLException e) {
@@ -117,25 +131,25 @@ public class Downloader {
 
     public void download() throws IOException {
         //初始化线程容器
-        threads_finish_status=new boolean[thread_count];
+        threads_finish_status = new boolean[thread_count];
         threads_going_status = new boolean[thread_count];
-        threads=new Thread[thread_count];
+        threads = new Thread[thread_count];
 
-        if(!prepared){
+        if (!prepared) {
             throw new RuntimeException("not Prepared!");
         }
 
         //首先因为得到了长度，应该取得文件的randomAccess对象
-        RandomAccessFile raf = new RandomAccessFile(file,"rw");
-        if (fileLength>0)//成功获取了文件长度
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        if (fileLength > 0)//成功获取了文件长度
             raf.setLength(fileLength);
 //        设置完长度就关闭文件流
-        if(logData.size()!=thread_count)//线程数量和记录数量不等，表示不能断点续传
+        if (logData.size() != thread_count)//线程数量和记录数量不等，表示不能断点续传
         {
             logData.clear();
             //初始化下载长度
-            for(int i=0;i<thread_count;i++){
-                logData.put(i,0);
+            for (int i = 0; i < thread_count; i++) {
+                logData.put(i, 0);
             }
         }
 
@@ -144,40 +158,40 @@ public class Downloader {
         URL url = new URL(urlString);
         int start;
         int end;
-        for(int i=0;i<thread_count;i++){
+        for (int i = 0; i < thread_count; i++) {
             //计算每个线程要下载的开头和结尾
-            start = i==0?0:i*block+1;
-            start+=logData.get(i);//把已经下载的数据也算上
-            end = i!=thread_count-1?(i+1)*block:fileLength;
+            start = i == 0 ? 0 : i * block + 1;
+            start += logData.get(i);//把已经下载的数据也算上
+            end = i != thread_count - 1 ? (i + 1) * block : fileLength;
             //判断是否已经下载完了
-            if(start>=end){
+            if (start >= end) {
                 //已经下载完了
                 continue;
             }
 
-            Pair<Integer,Integer> start_end = new Pair<>(start,end);
+            Pair<Integer, Integer> start_end = new Pair<>(start, end);
             //开启新线程下载
 
             Thread thread = new DownloadThread(url, start_end, file, i, new DownloadThread.DownloadThreadListener() {
                 @Override
                 public void downloading(int threadID, int downloadedLength) {
-                    logDataAppend(threadID,downloadedLength);
-                    if(listener!=null)
+                    logDataAppend(threadID, downloadedLength);
+                    if (listener != null)
                         listener.onDownloading(downloaded_size);
                 }
 
                 @Override
                 public void downloadFinished(int threadID, int downloadedLength) {
-                    logDataSet(threadID,downloadedLength);
-                    threads_finish_status[threadID]=true;
+                    logDataSet(threadID, downloadedLength);
+                    threads_finish_status[threadID] = true;
                     //每条线程下载完毕无论如何，保存下载长度
-                    progressLogUtil.updateProgress(urlString,threadID,downloadedLength);
-                    if(isFinished()){
-                        if(listener!=null){
+                    progressLogUtil.updateProgress(urlString, threadID, downloadedLength);
+                    if (isFinished()) {
+                        if (listener != null) {
                             listener.onDownloadFinished();
                         }
                         //判断下载是否真的完成了，完成则删除记录
-                        if(downloaded_size>=fileLength){
+                        if (downloaded_size >= fileLength || stoped) {
                             progressLogUtil.delete(urlString);
                         }
                     }
@@ -188,53 +202,74 @@ public class Downloader {
                     return threads_going_status[threadID];
                 }
             });
-            threads_finish_status[i]=false;
-            threads_going_status[i]=true;
-            threads[i]=thread;
+            threads_finish_status[i] = false;
+            threads_going_status[i] = true;
+            threads[i] = thread;
             thread.start();
         }
     }
 
-    private boolean isFinished(){
-        for(boolean b : threads_finish_status){
-            if(!b){
+    private boolean isFinished() {
+        for (boolean b : threads_finish_status) {
+            if (!b) {
                 return false;
             }
         }
         return true;
     }
 
-    private synchronized void logDataAppend(int threadID, int downloadedLength){
-        logData.put(threadID,logData.get(threadID)+downloadedLength);
-        downloaded_size+=downloadedLength;
+    private synchronized void logDataAppend(int threadID, int downloadedLength) {
+        logData.put(threadID, logData.get(threadID) + downloadedLength);
+        downloaded_size += downloadedLength;
     }
 
-    private synchronized void logDataSet(int threadID, int downloadedLength){
-        logData.put(threadID,downloadedLength);
+    private synchronized void logDataSet(int threadID, int downloadedLength) {
+        logData.put(threadID, downloadedLength);
     }
 
-    public String getFileName(HttpURLConnection connection){
-        String fileName = urlString.substring(urlString.lastIndexOf("/")+1);
-        if("".equals(fileName.trim())){
+    public String getFileName(HttpURLConnection connection) {
+        String fileName = urlString.substring(urlString.lastIndexOf("/") + 1);
+        if ("".equals(fileName.trim())) {
 
-            for(int i=0;;i++){
+            for (int i = 0; ; i++) {
                 String mine = connection.getHeaderField(i);
-                if(mine == null) break;
-                if("content-disposition".equals(connection.getHeaderFieldKey(i).toLowerCase())){
+                if (mine == null) break;
+                if ("content-disposition".equals(connection.getHeaderFieldKey(i).toLowerCase())) {
                     //正则匹配
                     Matcher matcher = Pattern.compile(".*filename=(.*)").matcher(mine.toLowerCase());
-                    if(matcher.find()) return matcher.group(1);
+                    if (matcher.find()) return matcher.group(1);
                 }
             }
-            fileName = UUID.randomUUID()+".temp";//随机名
+            fileName = UUID.randomUUID() + ".temp";//随机名
         }
         return fileName;
     }
 
-    public void pause(){
+    public void pause() {
         //暂停
         //暂停需要做的事情1：中止线程 2:记录下载长度
-        for (int i=0;i<threads_going_status.length;i++)
-            threads_going_status[i]=false;
+        if (!paused)
+            for (int i = 0; i < threads_going_status.length; i++)
+                threads_going_status[i] = false;
+        paused = true;
+    }
+
+    public void stop() {
+        if (!paused) {
+            for (int i = 0; i < threads_going_status.length; i++)
+                threads_going_status[i] = false;
+            stoped = true;
+        } else {
+            stoped = true;
+            if (listener != null) {
+                listener.onDownloadFinished();
+            }
+            //删除记录
+            progressLogUtil.delete(urlString);
+        }
+    }
+
+    public boolean isStoped() {
+        return stoped;
     }
 }
