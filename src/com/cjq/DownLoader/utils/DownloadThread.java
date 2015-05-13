@@ -12,7 +12,7 @@ import java.net.URL;
 /**
  * Created by CJQ on 2015/5/12.
  */
-public class DowloadThread extends Thread{
+public class DownloadThread extends Thread{
 
     private static final int BUFFER_SIZE = 8192;
     private URL url;
@@ -21,7 +21,7 @@ public class DowloadThread extends Thread{
     private int threadID;
     private DownloadThreadListener listener;
 
-    public DowloadThread(URL url, Pair<Integer, Integer> start_end, File file, int threadID, DownloadThreadListener listener) {
+    public DownloadThread(URL url, Pair<Integer, Integer> start_end, File file, int threadID, DownloadThreadListener listener) {
         this.url = url;
         this.start_end = start_end;
         this.file = file;

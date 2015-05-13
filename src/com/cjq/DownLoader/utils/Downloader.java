@@ -4,12 +4,10 @@ import android.util.Log;
 import android.util.Pair;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -160,7 +158,7 @@ public class Downloader {
             Pair<Integer,Integer> start_end = new Pair<>(start,end);
             //开启新线程下载
 
-            Thread thread = new DowloadThread(url, start_end, file, i, new DowloadThread.DownloadThreadListener() {
+            Thread thread = new DownloadThread(url, start_end, file, i, new DownloadThread.DownloadThreadListener() {
                 @Override
                 public void downloading(int threadID, int downloadedLength) {
                     logDataAppend(threadID,downloadedLength);
