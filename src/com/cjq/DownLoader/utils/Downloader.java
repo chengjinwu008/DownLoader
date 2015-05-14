@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 /**
  * Created by android on 2015/5/12.
  */
-public class Downloader {
+public final class Downloader {
     private Thread[] threads;//线程管理数组
     private boolean[] threads_finish_status;//线程完成状态容器
     private boolean[] threads_going_status;//线程开关控制容器

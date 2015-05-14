@@ -33,6 +33,7 @@ public class ProgressLogUtil {
             res.put(cursor.getInt(0), cursor.getInt(1));
         }
         cursor.close();
+//        database.close();
         return res;
     }
 
@@ -41,10 +42,12 @@ public class ProgressLogUtil {
         ContentValues values = new ContentValues();
         values.put("progress",progress);
         database.update("download",values," url =? and thread_id=? ",new String[]{url, String.valueOf(thread_id)});
+//        database.close();
     }
 
     public void delete(String url){
         SQLiteDatabase database = helper.getReadableDatabase();
         database.delete("download"," url = ? ",new String[]{url});
+//        database.close();
     }
 }
